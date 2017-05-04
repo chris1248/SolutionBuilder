@@ -689,7 +689,6 @@ namespace SolutionBuilder
 					}
 				}
 			}
-			WriteDGML(directory, "projects");
 		}
 
 		public void WriteDGML(String directory, string filename)
@@ -772,6 +771,10 @@ namespace SolutionBuilder
 			}
 		}
 
+		/// <summary>
+		/// Instead of specifying dependencies in the solution file.
+		/// Specify them as <ProjectReference> in the project itself.
+		/// </summary>
 		public void WriteProjectReferences()
 		{
 			foreach (ProjectBase proj in all_vc_projects)
