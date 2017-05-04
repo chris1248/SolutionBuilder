@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolutionBuilder", "SolutionBuilder.csproj", "{921DC951-6AEE-4C32-80BD-9BE31E3521DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSBuildTools", "MSBuildTools\MSBuildTools.csproj", "{36049D31-FA31-461A-A744-29177B1E4A14}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{921DC951-6AEE-4C32-80BD-9BE31E3521DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{921DC951-6AEE-4C32-80BD-9BE31E3521DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{921DC951-6AEE-4C32-80BD-9BE31E3521DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{921DC951-6AEE-4C32-80BD-9BE31E3521DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36049D31-FA31-461A-A744-29177B1E4A14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36049D31-FA31-461A-A744-29177B1E4A14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36049D31-FA31-461A-A744-29177B1E4A14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36049D31-FA31-461A-A744-29177B1E4A14}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
