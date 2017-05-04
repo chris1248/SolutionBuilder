@@ -22,18 +22,17 @@ namespace SolutionBuilder
 	{
 		static void PrintHelp()
 		{
-			Console.WriteLine("SolutionBuilder <directory> <xml build list> <output_solution_file> <configuration> <platform> [ReferenceFix]");
+			Console.WriteLine("SolutionBuilder <directory> <xml build list> <output_solution_file> <configuration> <platform> [xml build list] [ProjectItemsName]");
 			Console.WriteLine("<directory>            - The directory to search for .vcxproj and .csproj files. This will search recursively.");
 			Console.WriteLine("<output_solution_file> - The full path to save the solution file that is generated");
 			Console.WriteLine("<configuration>        - The configuration needed to build against");
 			Console.WriteLine("<platform>             - The platform needed to build against");
-			Console.WriteLine("[xml build list]       - The full path to an XML file containing the official projects in the build for the product.");
-			Console.WriteLine("[ProjectItemsName]     - The Item in the itemgroup for which to pull the official build list from");
+			Console.WriteLine("[xml build list]       - Optional: The full path to an MSBuild file containing an official list of projects to build. This is for very archaic or specific build systems");
+			Console.WriteLine("[ProjectItemsName]     - Optional: Required if the xml build list option is specified. The item in the itemgroup for which to pull the official build list from");
 		}
 
 		static void Main(string[] args)
 		{
-			//System.Diagnostics.Debugger.Launch();
 			DirectoryInfo search_dir;
 			FileInfo output_solution_file;
 			String Configuration;
@@ -77,30 +76,10 @@ namespace SolutionBuilder
 					return;
 				}
 
-				// Constructing the SolutionBuilder instance finds and parses all projects in the tree, including dead projects.
-				// It also finds dependencies between all projects.
 				bool build_parallel = false;
 				SolutionBuilder sb = new SolutionBuilder(search_dir, Platform, Configuration, xml_build_list, ProjectsItemName, build_parallel);
 				sb.Write(output_solution_file);
-				sb.PrintDebugData(Path.GetDirectoryName(output_solution_file.FullName));
-/*				if (args.Length == 6 && (args[5] == "ReferenceFix"))
-				{
-					sb.WriteProjectReferences();
-				}
-				else
-				{
-					sb.PrintDebugData(Path.GetDirectoryName(output_solution_file.FullName));
-					sb.Write(output_solution_file.FullName);
-				}
-				 */
-			}
-			else if (args.Length == 1)
-			{
-				if (File.Exists(args[0]))
-				{
-					SolutionParser parser = new SolutionParser(new FileInfo(args[0]));
-					
-				}
+				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
 			else
 			{
