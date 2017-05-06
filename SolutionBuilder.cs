@@ -178,8 +178,7 @@ namespace SolutionBuilder
 		/// Key = The output binary file name.
 		/// Value = An instance of Duplicate.
 		/// </summary>
-		private Dictionary<String, Duplicate> all_duplicate_projects = new Dictionary<String, Duplicate>();
-
+		private Dictionary<String, Duplicate> all_duplicate_projects = new Dictionary<String, Duplicate>(StringComparer.OrdinalIgnoreCase);
 		/// <summary>
 		/// Helps to determine how many times a project is reference by other projects.
 		/// Key = The project
@@ -196,6 +195,7 @@ namespace SolutionBuilder
 		/// There could be many more files not specified that need to be built that are not specified in this file.
 		/// </summary>
 		private List<String> mBuildList = new List<String>();
+
 		/// <summary>
 		/// A List of project file names that are NOT in the build.
 		/// </summary>
@@ -214,6 +214,11 @@ namespace SolutionBuilder
 		/// of a list of projects, and a meta-data element that holds the name of the a project they depend on.
 		/// </summary>
 		private ICollection<ProjectItem> extra_dependencies = new List<ProjectItem>();
+
+		/// <summary>
+		/// Used to check for duplicate GUID's. It's case insensitive
+		/// </summary>
+		private HashSet<String> all_guids = new HashSet<String>(StringComparer.OrdinalIgnoreCase);
 		#endregion
 		// ================================================================================
 		// ================================================================================
@@ -238,10 +243,11 @@ namespace SolutionBuilder
 
 			// Because this works in parallel we must store all results in a thread_safe container for
 			// parallel execution
-			var thrd_all_projects_map  = new ConcurrentDictionary<String, ProjectBase>();
+			var thrd_all_projects_map  = new ConcurrentDictionary<String, ProjectBase>(StringComparer.OrdinalIgnoreCase);
 			var thrd_all_cs_projects   = new ConcurrentBag<CS_Project>();
 			var thrd_all_vc_projects   = new ConcurrentBag<VC_Project>();
-			var thrd_duplicate_outputs = new ConcurrentDictionary<String, Duplicate>();
+			var thrd_duplicate_outputs = new ConcurrentDictionary<String, Duplicate>(StringComparer.OrdinalIgnoreCase);
+			var thrd_duplicate_guids   = new ConcurrentBag<String>();
 
 			Parallel.ForEach(all_projs, (file) =>
 			{
@@ -249,38 +255,63 @@ namespace SolutionBuilder
 				if (String.Compare(".csproj", file.Extension, true) == 0)
 				{
 					project = new CS_Project(file, global_properties);
+					// 1. Check for duplicate GUIDS
+					String guid = project.GetPropertyValue("ProjectGuid");
+
+					if (thrd_duplicate_guids.Contains(guid))
+					{
+						Writer.Color(String.Format("Error! Duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Red);
+						ignored_projects.Add(project);
+						return;
+					}
+					else
+						thrd_duplicate_guids.Add(guid);
+
+					// 2. Check the output binary path is not a duplicate either
+					if (thrd_duplicate_outputs.ContainsKey(project.OutputPath))
+					{
+						Writer.Color(String.Format("Error! Duplicate output path {0} found in file: {1}", project.OutputPath, project.FullPath), ConsoleColor.Red);
+						ignored_projects.Add(project);
+						return;
+					}
+					else
+					{
+						var duplicate = new Duplicate { File = project.OutputPath };
+						duplicate.Projects.Add(project);
+						thrd_duplicate_outputs.TryAdd(project.OutputPath, duplicate);
+					}
+
 					thrd_all_cs_projects.Add(project as CS_Project);
 				}
 				else if (String.Compare(".vcxproj", file.Extension, true) == 0)
 				{
 					project = new VC_Project(file, global_properties);
-					thrd_all_vc_projects.Add(project as VC_Project);
-				}
-				bool added = thrd_all_projects_map.TryAdd(project.OutputName, project);
-				if (!added)
-				{
-					// if it failed, Particle flow Slate is to blame. There are projects that output
-					// to the private_exe folder, but have the same name as their counterparts. 
-					// Thus try to choose the correct one.
-					String outdir = project.GetPropertyValue("OutDir");
+					// 1. Check for duplicate GUIDS
+					String guid = project.GetPropertyValue("ProjectGuid");
 
-					if (thrd_duplicate_outputs.ContainsKey(project.OutputName))
+					if (thrd_duplicate_guids.Contains(guid))
 					{
-						thrd_duplicate_outputs[project.OutputName].Projects.Add(project);
+						Writer.Color(String.Format("Error! Duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Red);
+						ignored_projects.Add(project);
+						return;
+					}
+					else
+						thrd_duplicate_guids.Add(guid);
+
+					// 2. Check the output binary path is not a duplicate either
+					if (thrd_duplicate_outputs.ContainsKey(project.OutputPath))
+					{
+						Writer.Color(String.Format("Error! Duplicate output path {0} found in file: {1}", project.OutputPath, project.FullPath), ConsoleColor.Red);
+						ignored_projects.Add(project);
+						return;
 					}
 					else
 					{
-						Duplicate dup = new Duplicate();
-						dup.File = project.OutputName;
-						dup.Projects.Add(project);
-						dup.Projects.Add(thrd_all_projects_map[project.OutputName]);
-						thrd_duplicate_outputs.TryAdd(project.OutputName, dup);
+						var duplicate = new Duplicate { File = project.OutputPath };
+						duplicate.Projects.Add(project);
+						thrd_duplicate_outputs.TryAdd(project.OutputPath, duplicate);
 					}
-
-					if (!outdir.Contains("private"))
-					{
-						thrd_all_projects_map[project.OutputName] = project;
-					}
+					thrd_all_vc_projects.Add(project as VC_Project);
 				}
 			});
 
@@ -292,17 +323,6 @@ namespace SolutionBuilder
 			// back to the usual containers.
 			all_projectnames_map   = thrd_all_projects_map.ToDictionary(p => p.Key, p => p.Value);
 			all_duplicate_projects = thrd_duplicate_outputs.ToDictionary(p => p.Key, p => p.Value);
-			foreach (Duplicate dup in all_duplicate_projects.Values)
-			{
-				foreach (ProjectBase proj in dup.Projects)
-				{
-					String outdir = proj.GetPropertyValue("OutDir");
-					if (outdir.Contains("private"))
-					{
-						ignored_projects.Add(proj);
-					}
-				}
-			}
 			all_vc_projects = thrd_all_vc_projects.ToList();
 			all_cs_projects = thrd_all_cs_projects.ToList();
 		}
@@ -331,12 +351,14 @@ namespace SolutionBuilder
 				try
 				{
 					CS_Project msproject = new CS_Project(file, global_properties);
+					if (CheckForDuplicates(msproject))
+						continue;
 					all_projectnames_map.Add(msproject.OutputName, msproject);
 					all_cs_projects.Add(msproject);
 				}
 				catch (System.Exception e)
 				{
-					Writer.Color(String.Format("Error opening file: {0}", file.FullName), ConsoleColor.Yellow);
+					Writer.Color(String.Format("Error opening file: {0}", file.FullName), ConsoleColor.Red);
 					Console.WriteLine(e.Message);
 					bad_count++;
 				}
@@ -346,12 +368,14 @@ namespace SolutionBuilder
 				try
 				{
 					VC_Project msproject = new VC_Project(file, global_properties);
+					if (CheckForDuplicates(msproject))
+						continue;
 					all_projectnames_map.Add(msproject.OutputName, msproject);
 					all_vc_projects.Add(msproject);
 				}
 				catch (System.Exception e)
 				{
-					Writer.Color(String.Format("Error opening file: {0}", file.FullName), ConsoleColor.Yellow);
+					Writer.Color(String.Format("Error opening file: {0}", file.FullName), ConsoleColor.Red);
 					Console.WriteLine(e.Message);
 					bad_count++;
 				}
@@ -365,6 +389,38 @@ namespace SolutionBuilder
 			Console.WriteLine("Files in Build List: {0}", mBuildList.Count);
 			timer.Stop();
 			Writer.Color(String.Format("Elapsed Time(Gather Projects): {0}", timer.Elapsed), ConsoleColor.Cyan);
+		}
+
+		/// <summary>
+		/// Checks for duplicate GUID's and duplicate output path's.
+		/// </summary>
+		/// <param name="project">The project to check</param>
+		/// <returns>true if not a duplicate</returns>
+		private bool CheckForDuplicates(ProjectBase project)
+		{
+			// 1. Check for duplicate GUIDS
+			String guid = project.GetPropertyValue("ProjectGuid");
+			if (all_guids.Contains(guid))
+			{
+				Writer.Color(String.Format("Error! Duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Red);
+				return false;
+			}
+			else
+				all_guids.Add(guid);
+
+			// 2. Check the output binary path is not a duplicate either
+			if (all_duplicate_projects.ContainsKey(project.OutputPath))
+			{
+				Writer.Color(String.Format("Error! Duplicate output path {0} found in file: {1}", project.OutputPath, project.FullPath), ConsoleColor.Red);
+				return false;
+			}
+			else
+			{
+				var duplicate = new Duplicate { File = project.OutputPath };
+				duplicate.Projects.Add(project);
+				all_duplicate_projects.Add(project.OutputPath, duplicate);
+			}
+			return true;
 		}
 
 		/// <summary>
@@ -555,8 +611,8 @@ namespace SolutionBuilder
 			int numProjects = all_projectnames_map.Count + all_duplicate_projects.Count;
 			Console.WriteLine("Found {0} project files", numProjects);
 			Console.WriteLine("Found {0} vc project files", all_vc_projects.Count);
-			Console.WriteLine("Found {0}  cs project files", all_cs_projects.Count);
-			Console.WriteLine("Found {0} in rake build list", mBuildList.Count);
+			Console.WriteLine("Found {0} cs project files", all_cs_projects.Count);
+			Console.WriteLine("Found {0} in build list", mBuildList.Count);
 			Console.WriteLine("Number of Projects in Solution: {0}", build_products.Count);
 			Console.WriteLine("Number of Projects NOT in build: {0}", numProjects - build_products.Count);
 
