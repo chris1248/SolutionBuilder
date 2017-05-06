@@ -402,8 +402,11 @@ namespace SolutionBuilder
 			String guid = project.GetPropertyValue("ProjectGuid");
 			if (all_guids.Contains(guid))
 			{
-				Writer.Color(String.Format("Error! Duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Red);
-				return false;
+				var newGuid = "{" + Guid.NewGuid() + "}";
+				project.SetProperty("ProjectGuid", newGuid);
+				project.Save();
+				Writer.Color(String.Format("Warning! fixing duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Yellow);
+				return true;
 			}
 			else
 				all_guids.Add(guid);
