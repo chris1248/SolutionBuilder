@@ -593,7 +593,7 @@ namespace MSBuildTools
 			build_products = build_products.OrderBy(p => p.FullPath).ToList();
 
 			timer.Stop();
-			PrintProjectMetrics(timer);
+			// PrintProjectMetrics(timer);
 		}
 
 		private void GenerateBuildListAll()

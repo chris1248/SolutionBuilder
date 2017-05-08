@@ -55,7 +55,7 @@ namespace SolutionBuilder
 				sb.Write(output_solution_file);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
-			else if (args.Length >= 5)
+			else if (args.Length == 6)
 			{
 				search_dir = new DirectoryInfo(args[0]);
 				if (!search_dir.Exists)
@@ -64,11 +64,11 @@ namespace SolutionBuilder
 					return;
 				}
 
-				output_solution_file = new FileInfo(args[1]);
-				Configuration          = args[3];
-				Platform               = args[4];
-				FileInfo xml_build_list = new FileInfo(args[2]);
-				String ProjectsItemName       = args[5];
+				output_solution_file    = new FileInfo(args[1]);
+				Configuration           = args[2];
+				Platform                = args[3];
+				FileInfo xml_build_list = new FileInfo(args[4]);
+				String ProjectsItemName = args[5];
 
 				if (!xml_build_list.Exists)
 				{
