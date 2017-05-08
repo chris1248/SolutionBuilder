@@ -423,7 +423,7 @@ namespace MSBuildTools
 				duplicate.Projects.Add(project);
 				all_duplicate_projects.Add(project.OutputPath, duplicate);
 			}
-			return true;
+			return false;
 		}
 
 		/// <summary>
