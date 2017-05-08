@@ -48,6 +48,8 @@
     <Compile Include="CS_Project.cs" />
     <Compile Include="ProjectBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SolutionBuilder.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="VC_Project.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

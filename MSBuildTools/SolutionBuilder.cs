@@ -12,7 +12,7 @@ using System.Xml;
 using MSBuildTools;
 using System.Text.RegularExpressions;
 
-namespace SolutionBuilder
+namespace MSBuildTools
 {
 	/// <summary>
 	/// Represents a duplicate where more than one project file writes to the same binary file
@@ -33,7 +33,7 @@ namespace SolutionBuilder
 	/// <summary>
 	/// Class reponsable for parsing projects and generating a visual studio solution file (*.sln)
 	/// </summary>
-	class SolutionBuilder
+	public class SolutionBuilder
 	{
 		/// <summary>
 		/// Constructor

@@ -6,6 +6,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml.Linq;
+using MSBuildTools;
 
 
 namespace SolutionBuilder
@@ -27,7 +28,7 @@ namespace SolutionBuilder
 			Console.WriteLine("<output_solution_file> - The full path to save the solution file that is generated");
 			Console.WriteLine("<configuration>        - The configuration needed to build against");
 			Console.WriteLine("<platform>             - The platform needed to build against");
-			Console.WriteLine("[xml build list]       - Optional: The full path to an MSBuild file containing an official list of projects to build. This is for very archaic or specific build systems");
+			Console.WriteLine("[xml build list]       - Optional: The full path to an MSBuild file containing an official list of projects to build.");
 			Console.WriteLine("[ProjectItemsName]     - Optional: Required if the xml build list option is specified. The item in the itemgroup for which to pull the official build list from");
 		}
 
@@ -50,7 +51,7 @@ namespace SolutionBuilder
 				Platform = args[3];
 
 				bool build_parallel = false;
-				SolutionBuilder sb = new SolutionBuilder(search_dir, Platform, Configuration, build_parallel);
+				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, build_parallel);
 				sb.Write(output_solution_file);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
@@ -77,7 +78,7 @@ namespace SolutionBuilder
 				}
 
 				bool build_parallel = false;
-				SolutionBuilder sb = new SolutionBuilder(search_dir, Platform, Configuration, xml_build_list, ProjectsItemName, build_parallel);
+				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, xml_build_list, ProjectsItemName, build_parallel);
 				sb.Write(output_solution_file);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}

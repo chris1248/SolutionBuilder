@@ -6,7 +6,7 @@ using Microsoft.Build.Evaluation;
 using Microsoft.Build.Construction;
 using System.Diagnostics;
 
-namespace SolutionBuilder
+namespace MSBuildTools
 {
 	public class Utils
 	{
