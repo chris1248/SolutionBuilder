@@ -52,7 +52,7 @@ namespace SolutionBuilder
 
 				bool build_parallel = false;
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, build_parallel);
-				sb.Write(output_solution_file);
+				sb.WriteSolution(output_solution_file.FullName, false);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
 			else if (args.Length == 6)
@@ -79,7 +79,7 @@ namespace SolutionBuilder
 
 				bool build_parallel = false;
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, xml_build_list, ProjectsItemName, build_parallel);
-				sb.Write(output_solution_file);
+				sb.WriteSolution(output_solution_file.FullName, false);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
 			else

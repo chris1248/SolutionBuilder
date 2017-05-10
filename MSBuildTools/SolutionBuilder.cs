@@ -133,15 +133,6 @@ namespace MSBuildTools
 			GenerateBuildListAll();
 		}
 
-		/// <summary>
-		/// Writes a solution file to disk.
-		/// </summary>
-		/// <param name="solution_path">The full path to the solution file to be written.</param>
-		public void Write(FileInfo solution_path)
-		{
-			WriteSolution(solution_path.FullName);
-		}
-
 		// ================================================================================
 		// ================================================================================
 		#region Data Lists
@@ -833,69 +824,47 @@ namespace MSBuildTools
 		/// <summary>
 		/// Instead of specifying dependencies in the solution file.
 		/// Specify them as <ProjectReference> in the project itself.
+		/// It is important to not specify a reference to an assembly twice. Therefore
+		/// this will look for pre-existing references to assemblies in the solution file
+		/// and remove them, before re-adding them as ProjectReferences
 		/// </summary>
 		public void WriteProjectReferences()
 		{
-			foreach (ProjectBase proj in all_vc_projects)
+			var nameLookups = all_projectnames_map.ToDictionary(p => p.Value.GetPropertyValue("AssemblyName"), p => p.Value, StringComparer.OrdinalIgnoreCase);
+
+			foreach (ProjectBase proj in all_projectnames_map.Values)
 			{
-				if (proj.IsManaged == false)
+				// First remove any existing references to these projects since they will be
+				// replaced by ProjectReferences
+				var toBeRemoved = new List<ProjectItem>();
+				var parents = new HashSet<ProjectElementContainer>();
+				foreach(ProjectItem normalRef in proj.GetItems("Reference"))
 				{
-					continue;
-				}
-
-				Console.WriteLine(proj.FullPath);
-
-				// First remove any ProjectReference's if any, and just start from scratch
-				List<ProjectElementContainer> parents = new List<ProjectElementContainer>();
-				foreach (var igroup in proj.GetItems("ProjectReference"))
-				{
-					Console.WriteLine("Element: {0}", igroup.ItemType);
-					ProjectElementContainer parent = igroup.Xml.Parent;
-					if (!parents.Contains(parent))
+					var assemblyInclude = Utils.GetAssemblyName(normalRef.EvaluatedInclude);
+					if (nameLookups.ContainsKey(assemblyInclude))
 					{
-						parents.Add(parent);
+						// Need to remove it
+						toBeRemoved.Add(normalRef);
 					}
 				}
-				
-				foreach (var item_group_container in parents)
+				foreach(var item in toBeRemoved)
 				{
-					item_group_container.Parent.RemoveChild(item_group_container);
+					var p = item.Xml.Parent;
+					p.RemoveChild(item.Xml);
+					if (parents.Contains(p) == false)
+						parents.Add(p);
 				}
-				
-				var cs_dependencies = from item in proj.GetDependencies()
-									  let extension = Path.GetExtension(item.FullPath).ToLower()
-									  where extension == ".csproj"
-									  select item;
 
-				if (cs_dependencies.Count() > 0)
+				// Re-Add all Project References again
+				if (proj.GetDependencies().Count() > 0)
 				{
-					ProjectItemGroupElement ref_group = proj.Xml.AddItemGroup();
+					var firstParent = parents.First();
+					ProjectItemGroupElement ref_group = firstParent as ProjectItemGroupElement;
 					foreach (ProjectBase dependency in proj.GetDependencies())
 					{
-						String extension = Path.GetExtension(dependency.FullPath).ToLower();
-						switch (extension)
-						{
-							case ".vcxproj":
-								//if (dependency.IsManaged)
-								//{
-								//    ref_item.AddMetadata("ReferenceOutputAssembly", "false");
-								//}
-								//else
-								//{
-								//    ref_item.AddMetadata("LinkLibraryDependencies", "false");
-								//}
-
-								break;
-
-							case ".csproj":
-								ProjectItemElement ref_item = ref_group.AddItem("ProjectReference", Utils.PathRelativeTo(proj.FullPath, dependency.FullPath));
-								ref_item.AddMetadata("ReferenceOutputAssembly", "false");
-								break;
-
-							default:
-								Debug.Assert(false, "Unknown File extension");
-								break;
-						}
+						ProjectItemElement item = ref_group.AddItem("ProjectReference", Utils.PathRelativeTo(proj.FullPath, dependency.FullPath));
+						item.AddMetadata("Project", dependency.GetPropertyValue("ProjectGuid"));
+						item.AddMetadata("Name",    dependency.GetPropertyValue("AssemblyName"));
 					}
 				}
 				proj.Save();
@@ -905,7 +874,16 @@ namespace MSBuildTools
 		// ================================================================================
 		// ================================================================================
 
-		private void WriteSolution(String solution_file)
+		/// <summary>
+		/// Writes out a solution file with all the dependencies listed as well
+		/// It only creates it for one configuration and platform.
+		/// </summary>
+		/// <param name="solution_file">The full path to the file to create. 
+		/// If one exists already it will be overwritten</param>
+		/// <param name="use_project_references">If false, the dependencies will be written out in the solution
+		/// file itself. If true, the dependencies will be specified using ProjectReferences in each of the project
+		/// files themselves.</param>
+		public void WriteSolution(String solution_file, bool use_project_references)
 		{
 			using (StreamWriter sw = new StreamWriter(solution_file))
 			{
@@ -919,7 +897,7 @@ namespace MSBuildTools
 
 				foreach (ProjectBase proj in build_projects)
 				{
-					WriteBasicProjectData(sw, str_guid, proj);
+					WriteBasicProjectData(sw, str_guid, proj, use_project_references);
 				}
 				sw.WriteLine("Global");
 				sw.WriteLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
@@ -938,9 +916,12 @@ namespace MSBuildTools
 				sw.WriteLine("\tEndGlobalSection");
 				sw.WriteLine("EndGlobal");
 			}
+			// last of all specify the project references
+			if (use_project_references)
+				WriteProjectReferences();
 		}
 
-		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj)
+		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj, bool use_project_references)
 		{
 			sw.WriteLine("Project(\"{4}{0}{5}\") = \"{1}\", \"{2}\", \"{3}\"",
 				str_guid,
@@ -950,7 +931,8 @@ namespace MSBuildTools
 				'{', '}'
 				);
 			sw.WriteLine("\tProjectSection(ProjectDependencies) = postProject");
-			WriteDependencies(sw, proj);
+			if (!use_project_references)
+				WriteDependencies(sw, proj);
 			sw.WriteLine("\tEndProjectSection");
 			sw.WriteLine("EndProject");
 		}
