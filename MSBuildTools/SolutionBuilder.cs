@@ -54,7 +54,8 @@ namespace MSBuildTools
 			search_dir = dir;
 			platform = Platform;
 			configuration = Config;
-			config_platform = String.Format("{0}|{1}", configuration, platform);
+			debug_config   = String.Format("{0}|{1}", "Debug", platform);
+			release_config = String.Format("{0}|{1}", "Release", platform);
 
 			InitializeBuildList(xml_build_list, itemsName);
 			
@@ -73,7 +74,8 @@ namespace MSBuildTools
 			search_dir = dir;
 			platform = Platform;
 			configuration = Config;
-			config_platform = String.Format("{0}|{1}", configuration, platform);
+			debug_config = String.Format("{0}|{1}", "Debug", platform);
+			release_config = String.Format("{0}|{1}", "Release", platform);
 
 			if (parallel)
 			{
@@ -149,7 +151,10 @@ namespace MSBuildTools
 		private DirectoryInfo search_dir;
 		private String platform;
 		private String configuration;
-		private String config_platform;
+		//private String config_platform;
+
+		private String debug_config;
+		private String release_config;
 
 		/// <summary>
 		/// A List of ALL vcxproj files found in the search directory. All are here if they are in the build or not. 
@@ -578,7 +583,7 @@ namespace MSBuildTools
 				if (mBuildList.Contains(project_file))
 				{
 					ProjectBase proj = pair.Value;
-					RecurseDependencies(proj);
+					RecurseDependencies(proj, 10);
 				}
 			}
 
@@ -641,8 +646,11 @@ namespace MSBuildTools
 			}
 		}
 
-		private void RecurseDependencies(ProjectBase project)
+		private void RecurseDependencies(ProjectBase project, int recursion_guard)
 		{
+			if (recursion_guard <= 0)
+				return;
+
 			if (!build_products.Contains(project))
 			{
 				build_products.Add(project);
@@ -650,7 +658,7 @@ namespace MSBuildTools
 
 			foreach (Project dependency in project.GetDependencies())
 			{
-				RecurseDependencies(dependency as ProjectBase);
+				RecurseDependencies(dependency as ProjectBase, --recursion_guard);
 			}
 		}
 
@@ -928,8 +936,10 @@ namespace MSBuildTools
 				sw.WriteLine("\tGlobalSection(ProjectConfigurationPlatforms) = postSolution");
 				foreach (ProjectBase proj in build_projects)
 				{
-					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {1}", proj.GetPropertyValue("ProjectGuid"), config_platform);
-					sw.WriteLine("\t\t{0}.{1}.Build.0 = {1}", proj.GetPropertyValue("ProjectGuid"), config_platform);
+					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {1}", proj.GetPropertyValue("ProjectGuid"), debug_config);
+					sw.WriteLine("\t\t{0}.{1}.Build.0 = {1}", proj.GetPropertyValue("ProjectGuid"), debug_config);
+					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {1}", proj.GetPropertyValue("ProjectGuid"), release_config);
+					sw.WriteLine("\t\t{0}.{1}.Build.0 = {1}", proj.GetPropertyValue("ProjectGuid"), release_config);
 				}
 				sw.WriteLine("\tEndGlobalSection");
 				sw.WriteLine("\tGlobalSection(ExtensibilityGlobals) = postSolution");
