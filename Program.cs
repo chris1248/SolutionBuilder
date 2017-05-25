@@ -38,7 +38,19 @@ namespace SolutionBuilder
 			FileInfo output_solution_file;
 			String Configuration;
 			String Platform;
-			if (args.Length == 4)
+			bool build_parallel = false;
+			if ((args.Length == 2) && (String.Compare(args[1], "ProjectRefConvert", StringComparison.OrdinalIgnoreCase) == 0))
+			{
+				search_dir = new DirectoryInfo(args[0]);
+				if (!search_dir.Exists)
+				{
+					PrintHelp();
+					return;
+				}
+				var sb = new MSBuildTools.SolutionBuilder(search_dir, "AnyCPU", "Debug", build_parallel);
+				sb.WriteProjectReferences();
+			}
+			else if (args.Length == 4)
 			{
 				search_dir = new DirectoryInfo(args[0]);
 				if (!search_dir.Exists)
@@ -50,7 +62,6 @@ namespace SolutionBuilder
 				Configuration = args[2];
 				Platform = args[3];
 
-				bool build_parallel = false;
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, build_parallel);
 				sb.WriteSolution(output_solution_file.FullName, false);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
@@ -77,7 +88,6 @@ namespace SolutionBuilder
 					return;
 				}
 
-				bool build_parallel = false;
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, xml_build_list, ProjectsItemName, build_parallel);
 				sb.WriteSolution(output_solution_file.FullName, false);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
