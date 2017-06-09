@@ -50,6 +50,18 @@ namespace SolutionBuilder
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, "AnyCPU", "Debug", build_parallel);
 				sb.WriteProjectReferences();
 			}
+			else if ((args.Length == 2) && (String.Compare(args[0], "FindOrphans", StringComparison.OrdinalIgnoreCase) == 0))
+			{
+				search_dir = new DirectoryInfo(args[1]);
+				if (!search_dir.Exists)
+				{
+					PrintHelp();
+					return;
+				}
+				var finder = new MSBuildTools.FindOrphans(search_dir);
+				int count = finder.Find();
+				Console.WriteLine("Found {0} orphaned files", count);
+			}
 			else if (args.Length == 4)
 			{
 				search_dir = new DirectoryInfo(args[0]);
