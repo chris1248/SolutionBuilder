@@ -63,7 +63,8 @@ namespace MSBuildTools
 
 			foreach (String file in allfiles)
 			{
-				_allFoundFiles.Add(file);
+				if (!file.EndsWith("g.cs"))
+					_allFoundFiles.Add(file);
 			}
 		}
 
