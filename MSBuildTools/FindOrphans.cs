@@ -70,7 +70,7 @@ namespace MSBuildTools
 
 		private int FindTheMissingOnes()
 		{
-			var missing = new HashSet<String>(_allFoundFiles.Except(_allProjectFiles));
+			var missing = new HashSet<String>(_allFoundFiles.Except(_allProjectFiles, StringComparer.OrdinalIgnoreCase));
 			foreach (String orphan in missing)
 			{
 				Console.WriteLine("Orphaned file: {0}", orphan);
