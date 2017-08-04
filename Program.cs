@@ -48,7 +48,21 @@ namespace SolutionBuilder
 					return;
 				}
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, "AnyCPU", "Debug", build_parallel);
-				sb.WriteProjectReferences();
+				sb.WriteProjectReferences(OperationType.SearchDirectory);
+			}
+			else if (String.Compare(args[0], "ProjectRefConvert", StringComparison.OrdinalIgnoreCase) == 0)
+			{
+				if (args.Length == 3)
+				{
+					var itemsFile = new FileInfo(args[1]);
+					string itemsName = args[2];
+					
+					if (itemsFile.Exists)
+					{
+						var sb = new MSBuildTools.SolutionBuilder("AnyCPU", "Debug", itemsFile, itemsName);
+						sb.WriteProjectReferencesForFile();
+					}
+				}
 			}
 			else if ((args.Length == 2) && (String.Compare(args[0], "FindOrphans", StringComparison.OrdinalIgnoreCase) == 0))
 			{
