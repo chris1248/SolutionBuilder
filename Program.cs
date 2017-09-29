@@ -48,7 +48,7 @@ namespace SolutionBuilder
 					return;
 				}
 				var sb = new MSBuildTools.SolutionBuilder(search_dir, "AnyCPU", "Debug", build_parallel);
-				sb.WriteProjectReferences(OperationType.SearchDirectory);
+				sb.WriteProjectReferences(OperationType.SearchDirectory, "Reference");
 			}
 			else if (String.Compare(args[0], "ProjectRefConvert", StringComparison.OrdinalIgnoreCase) == 0)
 			{

@@ -355,5 +355,15 @@ namespace MSBuildTools
 		{
 			return "{" + Path.GetFileName(FullPath) + "}";
 		}
+
+		public override void ConvertItemRefs()
+		{
+			throw new NotImplementedException();
+		}
+
+		public override List<String> GetOrphans()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

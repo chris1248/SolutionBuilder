@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 
 namespace MSBuildTools
@@ -98,6 +99,48 @@ namespace MSBuildTools
 			}
 			return numReferences;
 		}
+
+		public void ConvertReference(string elemnentType, Dictionary<string, ProjectBase> assemblyNames)
+		{
+			// First remove any existing references to these projects since they will be
+			// replaced by ProjectReferences
+			var toBeRemoved = new List<ProjectItem>();
+			var parents = new HashSet<ProjectElementContainer>();
+			foreach (ProjectItem normalRef in this.GetItems(elemnentType))
+			{
+				var assemblyInclude = Utils.GetAssemblyName(normalRef.EvaluatedInclude);
+				if (assemblyNames.ContainsKey(assemblyInclude))
+				{
+					// Need to remove it
+					toBeRemoved.Add(normalRef);
+				}
+			}
+			foreach (var item in toBeRemoved)
+			{
+				var p = item.Xml.Parent;
+				p.RemoveChild(item.Xml);
+				if (parents.Contains(p) == false)
+					parents.Add(p);
+			}
+
+			// Re-Add all Project References again
+			if (this.GetDependencies().Count() > 0)
+			{
+				var firstParent = parents.First();
+				ProjectItemGroupElement ref_group = firstParent as ProjectItemGroupElement;
+				foreach (ProjectBase dependency in this.GetDependencies())
+				{
+					ProjectItemElement item =
+						ref_group.AddItem("ProjectReference", Utils.PathRelativeTo(this.FullPath, dependency.FullPath));
+					item.AddMetadata("Project", dependency.GetPropertyValue("ProjectGuid"));
+					item.AddMetadata("Name", dependency.GetPropertyValue("AssemblyName"));
+				}
+			}
+		}
+
+		abstract public List<String> GetOrphans();
+
+		abstract public void ConvertItemRefs();
 
 		protected bool is_managed = false;
 		public bool IsManaged

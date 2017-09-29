@@ -869,48 +869,18 @@ namespace MSBuildTools
 		/// this will look for pre-existing references to assemblies in the solution file
 		/// and remove them, before re-adding them as ProjectReferences
 		/// </summary>
-		public void WriteProjectReferences(OperationType type)
+		public void WriteProjectReferences(OperationType type, string elemnentType)
 		{
 			var assemblyNames = all_projectnames_map.ToDictionary(p => p.Value.GetPropertyValue("AssemblyName"), p => p.Value, StringComparer.OrdinalIgnoreCase);
 
 			foreach (ProjectBase proj in all_projectnames_map.Values)
 			{
-				// First remove any existing references to these projects since they will be
-				// replaced by ProjectReferences
-				var toBeRemoved = new List<ProjectItem>();
-				var parents = new HashSet<ProjectElementContainer>();
-				foreach(ProjectItem normalRef in proj.GetItems("Reference"))
-				{
-					var assemblyInclude = Utils.GetAssemblyName(normalRef.EvaluatedInclude);
-					if (assemblyNames.ContainsKey(assemblyInclude))
-					{
-						// Need to remove it
-						toBeRemoved.Add(normalRef);
-					}
-				}
-				foreach(var item in toBeRemoved)
-				{
-					var p = item.Xml.Parent;
-					p.RemoveChild(item.Xml);
-					if (parents.Contains(p) == false)
-						parents.Add(p);
-				}
-
-				// Re-Add all Project References again
-				if (proj.GetDependencies().Count() > 0)
-				{
-					var firstParent = parents.First();
-					ProjectItemGroupElement ref_group = firstParent as ProjectItemGroupElement;
-					foreach (ProjectBase dependency in proj.GetDependencies())
-					{
-						ProjectItemElement item = ref_group.AddItem("ProjectReference", Utils.PathRelativeTo(proj.FullPath, dependency.FullPath));
-						item.AddMetadata("Project", dependency.GetPropertyValue("ProjectGuid"));
-						item.AddMetadata("Name",    dependency.GetPropertyValue("AssemblyName"));
-					}
-				}
+				proj.ConvertReference(elemnentType, assemblyNames);
 				proj.Save();
 			}
 		}
+
+
 
 		public void WriteProjectReferencesForFile()
 		{
@@ -1006,7 +976,7 @@ namespace MSBuildTools
 			}
 			// last of all specify the project references
 			if (use_project_references)
-				WriteProjectReferences(OperationType.SearchDirectory);
+				WriteProjectReferences(OperationType.SearchDirectory, "Reference");
 		}
 
 		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj, bool use_project_references)

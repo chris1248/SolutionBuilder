@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Construction;
 using System.Diagnostics;
@@ -29,6 +30,14 @@ namespace MSBuildTools
 			Uri relativeUri = uri1.MakeRelativeUri(uri2);
 
 			return relativeUri.OriginalString;
+		}
+
+		public static bool IsPathInDirectory(string directoryPath, string filePath)
+		{
+			var path = Path.GetFullPath(directoryPath).ToLower();
+			var file = Path.GetFullPath(filePath).ToLower();
+
+			return file.Contains(path);
 		}
 	}
 }

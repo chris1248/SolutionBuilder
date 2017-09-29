@@ -96,5 +96,77 @@ namespace MSBuildTools
 		{
 			return "{" + Path.GetFileName(FullPath) + "}";
 		}
+
+		public override void ConvertItemRefs()
+		{
+			// first identify any items to be removed
+			var toBeRemoved = new List<ProjectItem>();
+			var parents = new HashSet<ProjectElementContainer>();
+			foreach (ProjectItem item in this.GetItems("Compile"))
+			{
+				// If the item is outside of the project directory, then don't remove it.
+				// Perhaps say a shared file that a lot of project files include
+				if (!Utils.IsPathInDirectory(this.DirectoryPath, Path.Combine(this.DirectoryPath, item.EvaluatedInclude)))
+					continue;
+				
+				// Need to remove it
+				toBeRemoved.Add(item);
+			}
+
+			// second remove them
+			foreach (var item in toBeRemoved)
+			{
+				var p = item.Xml.Parent;
+				if (p != null)
+				{
+					p.RemoveChild(item.Xml);
+					if (parents.Contains(p) == false)
+						parents.Add(p);
+				}
+			}
+
+			if (parents.Count == 0)
+				return; // Nothing was removed
+
+			// Re-Add all the items again
+			var firstParent = parents.First();
+			ProjectItemGroupElement compile_group = firstParent as ProjectItemGroupElement;
+			ProjectItemElement compile = compile_group.AddItem("Compile", "**\\*.cs");
+
+			var sb = new StringBuilder();
+			foreach (var orphan in GetOrphans())
+			{
+				sb.Append(String.Format("{0};", Utils.PathRelativeTo(this.DirectoryPath, orphan)));
+			}
+
+			this.Save();
+		}
+
+		public override List<String> GetOrphans()
+		{
+			IEnumerable<String> allfiles = Directory.EnumerateFiles(this.DirectoryPath, "*.cs", SearchOption.AllDirectories);
+
+			HashSet<String> allFoundFiles = new HashSet<String>(StringComparer.InvariantCultureIgnoreCase);
+			HashSet<String> allProjectFiles = new HashSet<String>(StringComparer.InvariantCultureIgnoreCase);
+
+			foreach (ProjectItem item in this.AllEvaluatedItems)
+			{
+				String itemPath = item.EvaluatedInclude;
+				if (itemPath.EndsWith(".cs"))
+				{
+					String full = Path.GetFullPath(Path.Combine(this.DirectoryPath, itemPath));
+					allProjectFiles.Add(full);
+				}
+			}
+
+			foreach (String file in allfiles)
+			{
+				if (!file.EndsWith("g.cs"))
+					allFoundFiles.Add(file);
+			}
+
+			var missing = new HashSet<String>(allFoundFiles.Except(allProjectFiles, StringComparer.OrdinalIgnoreCase));
+			return missing.ToList();
+		}
 	}
 }

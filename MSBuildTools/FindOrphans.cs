@@ -34,6 +34,11 @@ namespace MSBuildTools
 			_searchDirectory = search_directory;
 		}
 
+		public FindOrphans(ProjectBase proj)
+		{
+			_searchDirectory = new DirectoryInfo(proj.DirectoryPath);
+		}
+
 		/// <summary>
 		/// Prints all orphaned files to the terminal window
 		/// </summary>
@@ -55,11 +60,7 @@ namespace MSBuildTools
 		{
 			foreach (CS_Project proj in projectFiles)
 			{
-				Console.WriteLine(proj);
-				foreach(ProjectItem item in proj.GetCompileItems)
-				{
-					Console.WriteLine("\t{0}", item.EvaluatedInclude);
-				}
+				proj.ConvertItemRefs();
 			}
 		}
 
