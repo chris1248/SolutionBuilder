@@ -14,6 +14,12 @@ using System.Text.RegularExpressions;
 
 namespace MSBuildTools
 {
+	public enum OperationType
+	{
+		SearchDirectory,
+		ItemsGroup
+	}
+
 	/// <summary>
 	/// Represents a duplicate where more than one project file writes to the same binary file
 	/// </summary>
@@ -67,6 +73,33 @@ namespace MSBuildTools
 			{
 				Initialize();
 			}
+		}
+
+		public SolutionBuilder(String Platform, String Config, FileInfo xml_build_list, String itemsName)
+		{
+			platform = Platform;
+			configuration = Config;
+
+			InitializeBuildList(xml_build_list, itemsName);
+
+			var globals = new Dictionary<String, String>();
+			globals["Configuration"] = configuration;
+			globals["Platform"] = platform;
+
+			foreach (String file in mBuildList)
+			{
+				try
+				{
+					ProjectBase msproject = new CS_Project(file, globals);
+					all_projectnames_map.Add(msproject.OutputName, msproject);
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e);
+				}
+			}
+
+			GatherDependencies();
 		}
 
 		public SolutionBuilder(DirectoryInfo dir, String Platform, String Config, bool parallel)
@@ -836,9 +869,9 @@ namespace MSBuildTools
 		/// this will look for pre-existing references to assemblies in the solution file
 		/// and remove them, before re-adding them as ProjectReferences
 		/// </summary>
-		public void WriteProjectReferences()
+		public void WriteProjectReferences(OperationType type)
 		{
-			var nameLookups = all_projectnames_map.ToDictionary(p => p.Value.GetPropertyValue("AssemblyName"), p => p.Value, StringComparer.OrdinalIgnoreCase);
+			var assemblyNames = all_projectnames_map.ToDictionary(p => p.Value.GetPropertyValue("AssemblyName"), p => p.Value, StringComparer.OrdinalIgnoreCase);
 
 			foreach (ProjectBase proj in all_projectnames_map.Values)
 			{
@@ -849,7 +882,7 @@ namespace MSBuildTools
 				foreach(ProjectItem normalRef in proj.GetItems("Reference"))
 				{
 					var assemblyInclude = Utils.GetAssemblyName(normalRef.EvaluatedInclude);
-					if (nameLookups.ContainsKey(assemblyInclude))
+					if (assemblyNames.ContainsKey(assemblyInclude))
 					{
 						// Need to remove it
 						toBeRemoved.Add(normalRef);
@@ -875,6 +908,51 @@ namespace MSBuildTools
 						item.AddMetadata("Name",    dependency.GetPropertyValue("AssemblyName"));
 					}
 				}
+				proj.Save();
+			}
+		}
+
+		public void WriteProjectReferencesForFile()
+		{
+			var assemblyNames = all_projectnames_map.ToDictionary(p => p.Value.GetPropertyValue("AssemblyName"), p => p.Value, StringComparer.OrdinalIgnoreCase);
+
+			foreach (ProjectBase proj in all_projectnames_map.Values)
+			{
+				// First remove any existing references to these projects since they will be
+				// replaced by ProjectReferences
+				var toBeRemoved = new List<ProjectItem>();
+				var parents = new HashSet<ProjectElementContainer>();
+				foreach (ProjectItem normalRef in proj.GetItems("Reference"))
+				{
+					var assemblyInclude = Utils.GetAssemblyName(normalRef.EvaluatedInclude);
+					if (assemblyNames.ContainsKey(assemblyInclude))
+					{
+						// Need to remove it
+						toBeRemoved.Add(normalRef);
+					}
+				}
+
+				foreach (var item in toBeRemoved)
+				{
+					var p = item.Xml.Parent;
+					p.RemoveChild(item.Xml);
+					if (parents.Contains(p) == false)
+						parents.Add(p);
+				}
+
+				// Re-Add all Project References again
+				if (proj.GetDependencies().Count() > 0)
+				{
+					var firstParent = parents.First();
+					ProjectItemGroupElement ref_group = firstParent as ProjectItemGroupElement;
+					foreach (ProjectBase dependency in proj.GetDependencies())
+					{
+						ProjectItemElement item = ref_group.AddItem("ProjectReference", Utils.PathRelativeTo(proj.FullPath, dependency.FullPath));
+						item.AddMetadata("Project", dependency.GetPropertyValue("ProjectGuid"));
+						item.AddMetadata("Name", dependency.GetPropertyValue("AssemblyName"));
+					}
+				}
+
 				proj.Save();
 			}
 		}
@@ -928,7 +1006,7 @@ namespace MSBuildTools
 			}
 			// last of all specify the project references
 			if (use_project_references)
-				WriteProjectReferences();
+				WriteProjectReferences(OperationType.SearchDirectory);
 		}
 
 		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj, bool use_project_references)
