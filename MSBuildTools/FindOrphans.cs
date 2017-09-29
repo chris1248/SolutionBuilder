@@ -17,6 +17,11 @@ namespace MSBuildTools
 		private DirectoryInfo _searchDirectory;
 		private HashSet<String> _allFoundFiles   = new HashSet<String>(StringComparer.InvariantCultureIgnoreCase);
 		private HashSet<String> _allProjectFiles = new HashSet<String>(StringComparer.InvariantCultureIgnoreCase);
+
+		private IEnumerable<String> csprojs;
+		private IEnumerable<String> allfiles;
+
+		private List<CS_Project> projectFiles;
 		#endregion
 		/// <summary>
 		/// Constructor
@@ -29,22 +34,44 @@ namespace MSBuildTools
 			_searchDirectory = search_directory;
 		}
 
+		/// <summary>
+		/// Prints all orphaned files to the terminal window
+		/// </summary>
+		/// <returns></returns>
 		public int Find()
 		{
-			IEnumerable<String> csprojs = Directory.EnumerateFiles(_searchDirectory.FullName, "*.csproj", SearchOption.AllDirectories);
-			IEnumerable<String> allfiles= Directory.EnumerateFiles(_searchDirectory.FullName, "*.cs", SearchOption.AllDirectories);
+			csprojs  = Directory.EnumerateFiles(_searchDirectory.FullName, "*.csproj", SearchOption.AllDirectories);
+			allfiles = Directory.EnumerateFiles(_searchDirectory.FullName, "*.cs", SearchOption.AllDirectories);
 			
 			GetFiles(csprojs, allfiles);
 			return FindTheMissingOnes();
 		}
 
+		/// <summary>
+		/// Replaces the item list in the build file with a wildcard pattern with files to be
+		/// included that are found, and an exclude pattern with files that were previously not
+		/// included
+		public void FixItemLists()
+		{
+			foreach (CS_Project proj in projectFiles)
+			{
+				Console.WriteLine(proj);
+				foreach(ProjectItem item in proj.GetCompileItems)
+				{
+					Console.WriteLine("\t{0}", item.EvaluatedInclude);
+				}
+			}
+		}
+
 		private void GetFiles(IEnumerable<string> csprojs, IEnumerable<string> allfiles)
 		{
+			projectFiles = new List<CS_Project>();
 			foreach (String csproj in csprojs)
 			{
 				try
 				{
-					var project = new Project(csproj);
+					var project = new CS_Project(csproj);
+					projectFiles.Add(project);
 					foreach (ProjectItem item in project.AllEvaluatedItems)
 					{
 						String itemPath = item.EvaluatedInclude;

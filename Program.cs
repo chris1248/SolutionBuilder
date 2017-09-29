@@ -64,7 +64,7 @@ namespace SolutionBuilder
 					}
 				}
 			}
-			else if ((args.Length == 2) && (String.Compare(args[0], "FindOrphans", StringComparison.OrdinalIgnoreCase) == 0))
+			else if ((args.Length >= 2) && (String.Compare(args[0], "FindOrphans", StringComparison.OrdinalIgnoreCase) == 0))
 			{
 				search_dir = new DirectoryInfo(args[1]);
 				if (!search_dir.Exists)
@@ -75,6 +75,10 @@ namespace SolutionBuilder
 				var finder = new MSBuildTools.FindOrphans(search_dir);
 				int count = finder.Find();
 				Console.WriteLine("Found {0} orphaned files", count);
+				if ((args.Length == 3) && (String.Compare(args[2], "fix", StringComparison.OrdinalIgnoreCase) == 0))
+				{
+					finder.FixItemLists();
+				}
 			}
 			else if (args.Length == 4)
 			{

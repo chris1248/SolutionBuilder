@@ -13,6 +13,12 @@ namespace MSBuildTools
 	/// </summary>
 	public class CS_Project : ProjectBase
 	{
+		public CS_Project(string path)
+			: base(path)
+		{
+			Initialize();
+			is_managed = true;
+		}
 		public CS_Project(FileInfo info, Dictionary<String, String> properties)
 			: base(info.FullName, properties)
 		{
@@ -42,6 +48,33 @@ namespace MSBuildTools
 		/// </summary>
 		public override String PDBFileName { get { return m_pdb_filename; } }
 
+		public override List<ProjectItem> GetCompileItems
+		{
+			get
+			{
+				/*
+				var query = from item in this.Items
+							where item.ItemType == "Compile"
+							where item.EvaluatedInclude.ToLower().EndsWith("*.cs")
+							select item;
+				return query.ToList();
+				*/
+				
+				var result = new List<ProjectItem>();
+				foreach(ProjectItem item in this.Items)
+				{
+					if (item.ItemType == "Compile")
+					{
+						var include = item.EvaluatedInclude.ToLower();
+						if (include.EndsWith(".cs"))
+						{
+							result.Add(item);
+						}
+					}
+				}
+				return result;
+			}
+		}
 
 		private void Initialize()
 		{

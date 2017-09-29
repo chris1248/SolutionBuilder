@@ -13,6 +13,12 @@ namespace MSBuildTools
 	/// </summary>
 	public abstract class ProjectBase : Microsoft.Build.Evaluation.Project
 	{
+		public ProjectBase(String file_path)
+			: base(file_path)
+		{
+
+		}
+
 		public ProjectBase(String file_path, Dictionary<String, String> global_properties)
 			: base(file_path, global_properties, null)
 		{
@@ -40,6 +46,7 @@ namespace MSBuildTools
 			return String.Format("ProjectBase: {0}", Path.GetFileName(this.FullPath));
 		}
 
+		abstract public List<ProjectItem> GetCompileItems { get; }
 
 		// Both C++ and C# projects can be compiled as managed, hence BOTH use the same XML markup 
 		// to represent reference assemblies

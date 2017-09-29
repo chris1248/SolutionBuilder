@@ -84,6 +84,19 @@ namespace MSBuildTools
 		/// </summary>
 		public String[] InputTypeLibraries { get { return input_type_libraries.ToArray(); } }
 
+		public override List<ProjectItem> GetCompileItems
+		{
+			get
+			{
+				var query = from item in this.Items
+							where item.ItemType == "Compile"
+							where item.EvaluatedInclude.EndsWith("*.cpp")
+							where item.EvaluatedInclude.EndsWith("*.h")
+							select item;
+				return query.ToList();
+			}
+		}
+
 		// ==========================================================================================
 
 		/// <summary>
