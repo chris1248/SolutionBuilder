@@ -113,6 +113,8 @@ namespace MSBuildTools
 				toBeRemoved.Add(item);
 			}
 
+			// keep track of childless parents.
+			var childless = new List<ProjectElementContainer>();
 			// second remove them
 			foreach (var item in toBeRemoved)
 			{
@@ -122,8 +124,12 @@ namespace MSBuildTools
 					p.RemoveChild(item.Xml);
 					if (parents.Contains(p) == false)
 						parents.Add(p);
+					if (p.Count == 0)
+						childless.Add(p);
 				}
 			}
+
+			
 
 			if (parents.Count == 0)
 				return; // Nothing was removed
@@ -137,6 +143,12 @@ namespace MSBuildTools
 			foreach (var orphan in GetOrphans())
 			{
 				sb.Append(String.Format("{0};", Utils.PathRelativeTo(this.DirectoryPath, orphan)));
+				compile.Exclude = sb.ToString();
+			}
+
+			foreach (var p in childless)
+			{
+				p.Parent.RemoveChild(p);
 			}
 
 			this.Save();
