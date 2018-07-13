@@ -83,7 +83,7 @@ namespace MSBuildTools
 			String TargetExt = GetPropertyValue("TargetExt");
 			m_output_binary = (TargetName + TargetExt).ToLower();
 
-			m_output_binary_path = Path.Combine(GetPropertyValue("OutputPath"), GetPropertyValue("AssemblyName"), ".dll");
+			m_output_binary_path = Path.Combine(GetPropertyValue("OutputPath"), m_output_binary);
 			// CSharp projects don't allow you to specify the .pdb path. They are 
 			// determined automatically
 			m_pdb_filename = (TargetName + ".pdb").ToLower();

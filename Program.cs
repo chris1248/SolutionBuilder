@@ -96,6 +96,31 @@ namespace SolutionBuilder
 				sb.WriteSolution(output_solution_file.FullName, false);
 				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
 			}
+			else if (args.Length == 5)
+			{
+				search_dir = new DirectoryInfo(args[0]);
+				if (!search_dir.Exists)
+				{
+					PrintHelp();
+					return;
+				}
+
+				output_solution_file = new FileInfo(args[1]);
+				Configuration = args[2];
+				Platform = args[3];
+				FileInfo build_list = new FileInfo(args[4]);
+
+				if (!build_list.Exists)
+				{
+					Console.WriteLine("Error! The file {0} does NOT exist.", build_list.FullName);
+					PrintHelp();
+					return;
+				}
+
+				var sb = new MSBuildTools.SolutionBuilder(search_dir, Platform, Configuration, build_list);
+				sb.WriteSolution(output_solution_file.FullName, false);
+				sb.WriteDGML(search_dir.FullName, Path.GetFileNameWithoutExtension(output_solution_file.FullName));
+			}
 			else if (args.Length == 6)
 			{
 				search_dir = new DirectoryInfo(args[0]);

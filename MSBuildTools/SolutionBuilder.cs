@@ -71,8 +71,27 @@ namespace MSBuildTools
 			}
 			else
 			{
-				Initialize();
+				GatherProjects(true);
+				GatherDependencies();
+				GenerateFinalBuildList();
 			}
+		}
+
+		public SolutionBuilder(DirectoryInfo dir, string Platform, string config, FileInfo buildList)
+		{
+			search_dir = dir;
+			platform = Platform;
+			configuration = config;
+			debug_config = String.Format("{0}|{1}", "Debug", platform);
+			release_config = String.Format("{0}|{1}", "Release", platform);
+			String[] files = File.ReadAllLines(buildList.FullName);
+			foreach (string file in files)
+			{
+				mBuildList.Add(file);
+			}
+			GatherProjects(true);
+			GatherDependencies();
+			GenerateFinalBuildList();
 		}
 
 		public SolutionBuilder(String Platform, String Config, FileInfo xml_build_list, String itemsName)
@@ -360,15 +379,31 @@ namespace MSBuildTools
 		/// Single threaded iteration of all projects files in the specified directory.
 		/// This can be slow.
 		/// </summary>
-		private void GatherProjects()
+		private void GatherProjects(bool fromBuildList = false)
 		{
 			Stopwatch timer = Stopwatch.StartNew();
-			
-			IEnumerable<FileInfo> cs_projs = from file in search_dir.EnumerateFiles("*.csproj", SearchOption.AllDirectories).AsParallel()
-											 select file;
 
-			IEnumerable<FileInfo> vc_projs = from file in search_dir.EnumerateFiles("*.vcxproj", SearchOption.AllDirectories).AsParallel()
-											 select file;
+			IEnumerable<FileInfo> cs_projs;
+			IEnumerable<FileInfo> vc_projs;
+			if (fromBuildList)
+			{
+				cs_projs = from file in mBuildList
+					let ext = Path.GetExtension(file)
+					where ext == ".csproj"
+					select new FileInfo(file);
+				vc_projs = from file in mBuildList
+					let ext = Path.GetExtension(file)
+					where ext == ".vcproj"
+					select new FileInfo(file);
+			}
+			else
+			{
+				cs_projs = from file in search_dir.EnumerateFiles("*.csproj", SearchOption.AllDirectories).AsParallel()
+							select file;
+
+				vc_projs = from file in search_dir.EnumerateFiles("*.vcxproj", SearchOption.AllDirectories).AsParallel()
+							select file;
+			}
 
 			// In order to open the project files correctly, we have to set the build platform and configuration
 			Dictionary<String, String> global_properties = new Dictionary<String, String>();
@@ -424,7 +459,7 @@ namespace MSBuildTools
 		/// Checks for duplicate GUID's and duplicate output path's.
 		/// </summary>
 		/// <param name="project">The project to check</param>
-		/// <returns>true if not a duplicate</returns>
+		/// <returns>true if a duplicate</returns>
 		private bool CheckForDuplicates(ProjectBase project)
 		{
 			// 1. Check for duplicate GUIDS
@@ -443,8 +478,9 @@ namespace MSBuildTools
 			// 2. Check the output binary path is not a duplicate either
 			if (all_duplicate_projects.ContainsKey(project.OutputPath))
 			{
-				Writer.Color(String.Format("Error! Duplicate output path {0} found in file: {1}", project.OutputPath, project.FullPath), ConsoleColor.Red);
-				return false;
+				var other = all_duplicate_projects[project.OutputPath];
+				Writer.Color(String.Format("Warning! Duplicate output path {0} found in file {1} and file {2}\n", project.OutputPath, project.FullPath, other.Projects[0].FullPath), ConsoleColor.Yellow);
+				return true;
 			}
 			else
 			{
