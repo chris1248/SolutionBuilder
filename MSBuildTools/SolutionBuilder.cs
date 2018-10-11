@@ -466,14 +466,16 @@ namespace MSBuildTools
 			String guid = project.GetPropertyValue("ProjectGuid");
 			if (all_guids.Contains(guid))
 			{
-				var newGuid = "{" + Guid.NewGuid() + "}";
+				var newGuid = "{" + Guid.NewGuid().ToString().ToUpper() + "}";
 				project.SetProperty("ProjectGuid", newGuid);
 				project.Save();
 				Writer.Color(String.Format("Warning! fixing duplicate GUID {0} found in file: {1}", guid, project.FullPath), ConsoleColor.Yellow);
-				return true;
+				all_guids.Add(newGuid);
 			}
 			else
+			{
 				all_guids.Add(guid);
+			}
 
 			// 2. Check the output binary path is not a duplicate either
 			if (all_duplicate_projects.ContainsKey(project.OutputPath))
@@ -986,7 +988,7 @@ namespace MSBuildTools
 				var build_projects = from proj in build_products
 							   orderby proj.FullPath ascending
 							   select proj;
-
+				FixupGuids(build_projects);
 				foreach (ProjectBase proj in build_projects)
 				{
 					WriteBasicProjectData(sw, str_guid, proj, use_project_references);
@@ -998,10 +1000,28 @@ namespace MSBuildTools
 				sw.WriteLine("\tGlobalSection(ProjectConfigurationPlatforms) = postSolution");
 				foreach (ProjectBase proj in build_projects)
 				{
-					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {1}", proj.GetPropertyValue("ProjectGuid"), debug_config);
-					sw.WriteLine("\t\t{0}.{1}.Build.0 = {1}", proj.GetPropertyValue("ProjectGuid"), debug_config);
-					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {1}", proj.GetPropertyValue("ProjectGuid"), release_config);
-					sw.WriteLine("\t\t{0}.{1}.Build.0 = {1}", proj.GetPropertyValue("ProjectGuid"), release_config);
+					// Not all platforms are uniformly the same.
+					// Thus get the default one from the project file itself
+					var query = from prop in proj.Xml.Properties
+						where prop.Name == "Platform"
+						select prop;
+					var queryList = query.ToList();
+					var localPlatform = proj.GetPropertyValue("Platform");
+					if (queryList.Count > 0)
+					{
+						ProjectPropertyElement xmlPlatform = queryList.First();
+
+						String strPlatform = xmlPlatform.Value;
+						if (string.Compare(strPlatform, platform, StringComparison.InvariantCultureIgnoreCase) != 0)
+						{
+							localPlatform = strPlatform;
+						}
+					}
+
+					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {2}", proj.GetPropertyValue("ProjectGuid"), debug_config, $"Debug|{localPlatform}");
+					sw.WriteLine("\t\t{0}.{1}.Build.0 = {2}", proj.GetPropertyValue("ProjectGuid"), debug_config, $"Debug|{localPlatform}");
+					sw.WriteLine("\t\t{0}.{1}.ActiveCfg = {2}", proj.GetPropertyValue("ProjectGuid"), release_config, $"Release|{localPlatform}");
+					sw.WriteLine("\t\t{0}.{1}.Build.0 = {2}", proj.GetPropertyValue("ProjectGuid"), release_config, $"Release|{localPlatform}");
 				}
 				sw.WriteLine("\tEndGlobalSection");
 				sw.WriteLine("\tGlobalSection(ExtensibilityGlobals) = postSolution");
@@ -1015,13 +1035,33 @@ namespace MSBuildTools
 				WriteProjectReferences(OperationType.SearchDirectory, "Reference");
 		}
 
+		// Check for an  Empty Project Guid, a blank one is a problem for .sln files
+		// and if empty will corrupt the Solution (*.SLN) file.
+		private void FixupGuids(IOrderedEnumerable<ProjectBase> build_projects)
+		{
+			foreach (var proj in build_projects)
+			{
+				String projectGUID = proj.GetPropertyValue("ProjectGuid");
+				if (String.IsNullOrEmpty(projectGUID))
+				{
+					Guid guid = Guid.NewGuid();
+					projectGUID = string.Format("{1}{0}{2}", guid.ToString().ToUpper(), '{', '}');
+					proj.SetProperty("ProjectGuid", projectGUID); // In memory only, it won't write out to the project file
+					proj.MarkDirty();
+					proj.ReevaluateIfNecessary();
+				}
+			}
+		}
+
 		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj, bool use_project_references)
 		{
+			String projectGUID = proj.GetPropertyValue("ProjectGuid");
+			Debug.Assert(string.IsNullOrEmpty(projectGUID) == false);
 			sw.WriteLine("Project(\"{4}{0}{5}\") = \"{1}\", \"{2}\", \"{3}\"",
 				str_guid,
 				proj.GetPropertyValue("ProjectName"),
 				proj.FullPath,
-				proj.GetPropertyValue("ProjectGuid"),
+				projectGUID,
 				'{', '}'
 				);
 			sw.WriteLine("\tProjectSection(ProjectDependencies) = postProject");
@@ -1035,7 +1075,15 @@ namespace MSBuildTools
 		{
 			foreach (Project proj in project.GetDependencies())
 			{
-				sw.WriteLine("\t\t{0} = {0}", proj.GetPropertyValue("ProjectGuid"));
+				String guid = proj.GetPropertyValue("ProjectGuid");
+				if (!string.IsNullOrEmpty(guid))
+				{
+					sw.WriteLine("\t\t{0} = {0}", guid);
+				}
+				else
+				{
+					Console.WriteLine("Warning! Project {0} has an empty or non-existant GUID", proj.FullPath);
+				}
 			}
 		}
 
