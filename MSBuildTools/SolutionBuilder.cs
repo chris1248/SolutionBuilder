@@ -995,7 +995,8 @@ namespace MSBuildTools
 				}
 				sw.WriteLine("Global");
 				sw.WriteLine("\tGlobalSection(SolutionConfigurationPlatforms) = preSolution");
-				sw.WriteLine("\t\t{0}|{1} = {0}|{1}", configuration, platform);
+				sw.WriteLine("\t\t{0}|{1} = {0}|{1}", "Debug", platform);
+				sw.WriteLine("\t\t{0}|{1} = {0}|{1}", "Release", platform);
 				sw.WriteLine("\tEndGlobalSection");
 				sw.WriteLine("\tGlobalSection(ProjectConfigurationPlatforms) = postSolution");
 				foreach (ProjectBase proj in build_projects)
