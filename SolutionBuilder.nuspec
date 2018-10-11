@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+	<metadata>
+		<id>SolutionBuilder</id>
+		<title>Solution Builder</title>
+		<version>1.0.0</version>
+		<authors>Chris Johnson</authors>
+		<owners>Chris Johnson</owners>
+		<projectUrl>https://github.com/chris1248/SolutionBuilder</projectUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<summary>A tool to create Microsoft Visual Studio solution files</summary>
+		<description>This tool takes a set of visual studio csproj and vcxproj files and generates a solution file for them.</description>
+		<copyright>Copyright 2009-2018 Chris Johnson</copyright>
+	</metadata>
+	<files>
+		<!-- for the desktop -->
+		<file src="bin\$config$\SolutionBuilder.exe" target="lib\net462" />
+		<file src="bin\$config$\SolutionBuilder.exe.config" target="lib\net462" />
+		<file src="bin\$config$\*.dll" target="lib\net462" />
+	</files>
+</package>
