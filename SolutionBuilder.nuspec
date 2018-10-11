@@ -3,7 +3,7 @@
 	<metadata>
 		<id>SolutionBuilder</id>
 		<title>Solution Builder</title>
-		<version>1.0.0</version>
+		<version>1.0.2</version>
 		<authors>Chris Johnson</authors>
 		<owners>Chris Johnson</owners>
 		<projectUrl>https://github.com/chris1248/SolutionBuilder</projectUrl>
@@ -14,8 +14,8 @@
 	</metadata>
 	<files>
 		<!-- for the desktop -->
-		<file src="bin\$config$\SolutionBuilder.exe" target="lib\net462" />
-		<file src="bin\$config$\SolutionBuilder.exe.config" target="lib\net462" />
-		<file src="bin\$config$\*.dll" target="lib\net462" />
+		<file src="bin\$config$\SolutionBuilder.exe" target="tools" />
+		<file src="bin\$config$\SolutionBuilder.exe.config" target="tools" />
+		<file src="bin\$config$\*.dll" target="tools" />
 	</files>
 </package>
