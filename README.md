@@ -1,6 +1,9 @@
 # SolutionBuilder
 Generates a solution file by pointing to a directory
 
+# Build Status
+[![Build Status](https://dev.azure.com/christopher3d/SolutionBuilder/_apis/build/status/chris1248.SolutionBuilder)](https://dev.azure.com/christopher3d/SolutionBuilder/_build/latest?definitionId=1)
+
 # Introduction
 This is used to quickly generate a visual studio solution file for many msbuild project files in a directory.
 The impetus being that there are many old projects with very large builds spanning hundreds of projects to build.
