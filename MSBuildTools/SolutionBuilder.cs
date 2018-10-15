@@ -820,6 +820,12 @@ namespace MSBuildTools
 			}
 		}
 
+		/// <summary>
+		/// Outputs a graph file (*.dgml) that shows which projects depend on each other.
+		/// This *.dgml file can be opened and viewed in visual studio.
+		/// </summary>
+		/// <param name="directory"></param>
+		/// <param name="filename"></param>
 		public void WriteDGML(String directory, string filename)
 		{
 			XmlDocument doc = new XmlDocument();
@@ -1054,6 +1060,13 @@ namespace MSBuildTools
 			}
 		}
 
+		/// <summary>
+		/// Writes information about the project and it's own dependencies.
+		/// </summary>
+		/// <param name="sw">The stream to write to</param>
+		/// <param name="str_guid">The GUID for the project</param>
+		/// <param name="proj">The project instance that's getting written out to the solution file</param>
+		/// <param name="use_project_references">Whether to write out the dependent projects or not. This should always be true.</param>
 		private void WriteBasicProjectData(StreamWriter sw, String str_guid, ProjectBase proj, bool use_project_references)
 		{
 			String projectGUID = proj.GetPropertyValue("ProjectGuid");
@@ -1072,6 +1085,11 @@ namespace MSBuildTools
 			sw.WriteLine("EndProject");
 		}
 
+		/// <summary>
+		/// Actually invokes the code to write out a list of dependencies for the project.
+		/// </summary>
+		/// <param name="sw"></param>
+		/// <param name="project"></param>
 		private void WriteDependencies(StreamWriter sw, ProjectBase project)
 		{
 			foreach (Project proj in project.GetDependencies())
