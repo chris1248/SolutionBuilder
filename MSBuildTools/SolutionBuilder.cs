@@ -393,7 +393,7 @@ namespace MSBuildTools
 					select new FileInfo(file);
 				vc_projs = from file in mBuildList
 					let ext = Path.GetExtension(file)
-					where ext == ".vcproj"
+					where ext == ".vcxproj"
 					select new FileInfo(file);
 			}
 			else
